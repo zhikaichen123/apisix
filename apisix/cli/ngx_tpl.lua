@@ -65,7 +65,7 @@ stream {
 
     lua_shared_dict lrucache-lock-stream   10m;
 
-    resolver {% for _, dns_addr in ipairs(dns_resolver or {}) do %} {*dns_addr*} {% end %} valid={*dns_resolver_valid*};
+    resolver {% for _, dns_addr in ipairs(dns_resolver or {}) do %} {*dns_addr*} {% end %} {% if dns_resolver_valid then %} valid={*dns_resolver_valid*}{% end %};
     resolver_timeout {*resolver_timeout*};
 
     # stream configuration snippet starts
@@ -187,7 +187,7 @@ http {
 
     lua_socket_log_errors off;
 
-    resolver {% for _, dns_addr in ipairs(dns_resolver or {}) do %} {*dns_addr*} {% end %} valid={*dns_resolver_valid*};
+    resolver {% for _, dns_addr in ipairs(dns_resolver or {}) do %} {*dns_addr*} {% end %} {% if dns_resolver_valid then %} valid={*dns_resolver_valid*}{% end %};
     resolver_timeout {*resolver_timeout*};
 
     lua_http10_buffering off;
@@ -199,6 +199,7 @@ http {
     access_log off;
     {% else %}
     log_format main escape={* http.access_log_format_escape *} '{* http.access_log_format *}';
+    uninitialized_variable_warn off;
 
     access_log {* http.access_log *} main buffer=16384 flush=3;
     {% end %}
@@ -339,31 +340,12 @@ http {
                 apisix.http_admin()
             }
         }
-
-        location /apisix/dashboard {
-            {%if allow_admin then%}
-                {% for _, allow_ip in ipairs(allow_admin) do %}
-                allow {*allow_ip*};
-                {% end %}
-                deny all;
-            {%else%}
-                allow all;
-            {%end%}
-
-            alias dashboard/;
-
-            try_files $uri $uri/index.html /index.html =404;
-        }
-
-        location =/robots.txt {
-            return 200 'User-agent: *\nDisallow: /';
-        }
     }
     {% end %}
 
     server {
-        {% for _, port in ipairs(node_listen) do %}
-        listen {* port *} {% if enable_reuseport then %} reuseport {% end %};
+        {% for _, item in ipairs(node_listen) do %}
+        listen {* item.port *} {% if enable_reuseport then %} reuseport {% end %} {% if item.enable_http2 then %} http2 {% end %};
         {% end %}
         {% if ssl.enable then %}
         {% for _, port in ipairs(ssl.listen_port) do %}
@@ -378,8 +360,8 @@ http {
         {% end %}
 
         {% if enable_ipv6 then %}
-        {% for _, port in ipairs(node_listen) do %}
-        listen [::]:{* port *} {% if enable_reuseport then %} reuseport {% end %};
+        {% for _, item in ipairs(node_listen) do %}
+        listen [::]:{* item.port *} {% if enable_reuseport then %} reuseport {% end %} {% if item.enable_http2 then %} http2 {% end %};
         {% end %}
         {% if ssl.enable then %}
         {% for _, port in ipairs(ssl.listen_port) do %}
@@ -448,21 +430,6 @@ http {
             content_by_lua_block {
                 apisix.http_admin()
             }
-        }
-
-        location /apisix/dashboard {
-            {%if allow_admin then%}
-                {% for _, allow_ip in ipairs(allow_admin) do %}
-                allow {*allow_ip*};
-                {% end %}
-                deny all;
-            {%else%}
-                allow all;
-            {%end%}
-
-            alias dashboard/;
-
-            try_files $uri $uri/index.html /index.html =404;
         }
         {% end %}
 

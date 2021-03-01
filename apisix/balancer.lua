@@ -45,7 +45,6 @@ local function fetch_health_nodes(upstream, checker)
     if not checker then
         local new_nodes = core.table.new(0, #nodes)
         for _, node in ipairs(nodes) do
-            -- TODO filter with metadata
             new_nodes[node.host .. ":" .. node.port] = node.weight
         end
         return new_nodes
@@ -57,7 +56,6 @@ local function fetch_health_nodes(upstream, checker)
     for _, node in ipairs(nodes) do
         local ok, err = checker:get_target_status(node.host, port or node.port, host)
         if ok then
-            -- TODO filter with metadata
             up_nodes[node.host .. ":" .. node.port] = node.weight
         elseif err then
             core.log.error("failed to get health check target status, addr: ",
@@ -163,8 +161,12 @@ local function pick_server(route, ctx)
         version = version .. "#" .. checker.status_ver
     end
 
-    local server_picker = lrucache_server_picker(key, version,
-                            create_server_picker, up_conf, checker)
+    -- the same picker will be used in the whole request, especially during the retry
+    local server_picker = ctx.server_picker
+    if not server_picker then
+        server_picker = lrucache_server_picker(key, version,
+                                               create_server_picker, up_conf, checker)
+    end
     if not server_picker then
         return nil, "failed to fetch server picker"
     end
