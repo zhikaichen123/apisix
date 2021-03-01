@@ -245,10 +245,6 @@ compress-tar:
 	./apisix \
 	./bin \
 	./conf \
-<<<<<<< HEAD
-	./doc \
-=======
->>>>>>> c87e3798ee4db6c124e3550cf62a3c166fdbfd88
 	./rockspec \
 	LICENSE \
 	Makefile \
