@@ -34,6 +34,7 @@ jobs:
         git clone https://github.com/api7/apisix-build-tools.git
         cd apisix-build-tools
         make package type=rpm app=apisix version=master checkout=master
+        cd ..
         rm -rf $(ls -1 --ignore=apisix-build-tools --ignore=t --ignore=utils --ignore=Makefile --ignore=rockspec)
 
     - name: Install Redis Cluster
